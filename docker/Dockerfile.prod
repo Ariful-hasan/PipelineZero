@@ -2,6 +2,8 @@
 FROM node:24-alpine AS deps
 RUN apk add --no-cache openssl
 WORKDIR /app
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
@@ -10,6 +12,8 @@ RUN npm ci
 FROM node:24-alpine AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -19,6 +23,8 @@ RUN npm run build
 FROM node:24-alpine AS prod-deps
 RUN apk add --no-cache openssl
 WORKDIR /app
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci --only=production
