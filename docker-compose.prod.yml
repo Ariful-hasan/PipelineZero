@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+    volumes: [] # Remove dev volumes for production
+    environment:
+      NODE_ENV: production
+    # In production, we might not want to expose the DB/Redis ports to the host
+    # but for now, we'll keep them consistent with the base file unless requested otherwise.
+
+  db:
+    restart: always # Ensure production DB always restarts
+
+  redis:
+    restart: always

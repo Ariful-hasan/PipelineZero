@@ -1,0 +1,21 @@
+FROM node:24-alpine
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies
+RUN npm install
+
+# Copy the rest of the application
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# The command is usually overridden in docker-compose for dev
+CMD ["npm", "run", "start:dev"]
