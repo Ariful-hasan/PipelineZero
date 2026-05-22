@@ -4,7 +4,6 @@ RUN apk add --no-cache openssl shadow
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG DATABASE_URL
 
 RUN if ! getent group ${GROUP_ID} > /dev/null; then \
         addgroup -g ${GROUP_ID} appgroup; \
@@ -15,27 +14,21 @@ RUN if ! getent group ${GROUP_ID} > /dev/null; then \
 
 WORKDIR /app
 
-# Ensure correct permissions for the WORKDIR
-RUN chown -R ${USER_ID}:${GROUP_ID} /app
+# 1. Copy config and package files first (Needed for install and prisma generate)
+COPY package*.json prisma.config.ts tsconfig.json ./
+COPY prisma ./prisma/
 
-# Switch to the non-root user
-USER ${USER_ID}
-
-# Set environment variables
-ENV DATABASE_URL=${DATABASE_URL}
-
-# Copy package files first for better caching
-COPY --chown=${USER_ID}:${GROUP_ID} package*.json ./
-COPY --chown=${USER_ID}:${GROUP_ID} prisma ./prisma/
-
-# Install all dependencies
+# 2. Install dependencies 
 RUN npm install
 
-# Copy the rest of the application
-COPY --chown=${USER_ID}:${GROUP_ID} . .
+# 3. Generate Prisma Client (Optimized caching)
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
 
-# Generate Prisma Client
-RUN npx prisma generate
+# 4. Copy the remaining source files 
+COPY . .
 
-# The command is usually overridden in docker-compose for dev
+# 5. Fix ownership permissions and drop down to unprivileged execution context
+RUN chown -R ${USER_ID}:${GROUP_ID} /app
+USER ${USER_ID}
+
 CMD ["npm", "run", "start:dev"]

@@ -1,34 +1,31 @@
-# Stage 1: Install all dependencies (including devDependencies)
+# Stage 1: Install all dependencies
 FROM node:24-alpine AS deps
 RUN apk add --no-cache openssl
 WORKDIR /app
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
-COPY package*.json ./
+# Copy config for prisma generate
+COPY package*.json prisma.config.ts tsconfig.json ./
 COPY prisma ./prisma/
 RUN npm ci
+# Generate Prisma Client with dummy URL
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
 
 # Stage 2: Build the application
 FROM node:24-alpine AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Install production dependencies only
 FROM node:24-alpine AS prod-deps
 RUN apk add --no-cache openssl
 WORKDIR /app
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
-COPY package*.json ./
+COPY package*.json prisma.config.ts tsconfig.json ./
 COPY prisma ./prisma/
 RUN npm ci --only=production
-RUN npx prisma generate
+# Generate Prisma Client for production
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate
 
 # Stage 4: Production runner
 FROM node:24-alpine AS runner
