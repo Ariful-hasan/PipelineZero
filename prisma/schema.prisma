@@ -11,6 +11,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
 
 model User {
   id              String                @id @default(uuid(7)) @db.Uuid
@@ -39,38 +45,37 @@ model Workspace {
   
   users       WorkspaceUser[]
   invitations WorkspaceInvitation[]
-  // ADD THIS LINE BELOW TO FIX THE RELATION ERROR:
   jobApplications JobApplication[]
 
   @@map("workspaces")
 }
 
 model WorkspaceUser {
-  workspaceId String   @map("workspace_id") @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  role        String   @db.VarChar(50)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  workspaceId String        @map("workspace_id") @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
   
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([workspaceId, userId])
   @@map("workspace_users")
 }
 
 model WorkspaceInvitation {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  invitedBy   String   @map("invited_by") @db.Uuid
-  email       String   @db.VarChar(255)
-  role        String   @db.VarChar(50)
-  token       String   @unique @db.VarChar(255)
-  status      String   @default("pending") @db.VarChar(50)
-  expiresAt   DateTime @map("expires_at") @db.Timestamp(6)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  id          String        @id @default(uuid(7)) @db.Uuid
+  workspaceId String        @map("workspace_id") @db.Uuid
+  invitedBy   String        @map("invited_by") @db.Uuid
+  email       String        @db.VarChar(255)
+  role        WorkspaceRole 
+  token       String        @unique @db.VarChar(255)
+  status      String        @default("pending") @db.VarChar(50)
+  expiresAt   DateTime      @map("expires_at") @db.Timestamp(6)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
   
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  sender      User      @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sender      User          @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
 
   @@map("workspace_invitations")
 }
